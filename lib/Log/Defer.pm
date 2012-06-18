@@ -10,24 +10,43 @@ use Carp qw/croak/;
 use Guard;
 
 
+my $log_levels = {
+  error => 10,
+  warn => 20,
+  info => 30,
+  debug => 40,
+};
+
 sub new {
-  my ($class, $cb) = @_;
+  my ($class, $cb, %args) = @_;
   my $self = {};
   bless $self, $class;
 
   croak "must provide callback to Log::Defer" unless $cb && ref $cb eq 'CODE';
 
   my $msg = {
-    logs => '',
-    start => Time::HiRes::time,
+    logs => [],
+    start => format_time(Time::HiRes::time),
   };
 
   $self->{msg} = $msg;
 
+  if (exists $args{level}) {
+    if ($args{level} =~ /^\d+$/) {
+      $self->{log_level} = $args{level};
+    } else {
+      $self->{log_level} = $log_levels->{$args{level}};
+      croak "bad level value (should be an error level name or a positive integer)"
+        if !defined $self->{log_level};
+    }
+  } else {
+    $self->{log_level} = 30;
+  }
+
   $self->{guard} = guard {
-    my $end_time = Time::HiRes::time();
+    my $end_time = format_time(Time::HiRes::time());
     $msg->{end} = $end_time;
-    my $duration = $end_time - $msg->{start};
+    my $duration = format_time($end_time - $msg->{start});
 
     foreach my $name (keys %{$msg->{timers}}) {
       push @{$msg->{timers}->{$name}}, $duration
@@ -42,15 +61,31 @@ sub new {
 
 
 sub error {
-  $_[0]->_add_log('ERROR', $_[1]);
+  my ($self, $msg) = @_;
+
+  $self->_add_log(10, $msg)
+    if $self->{log_level} >= 10;
+}
+
+sub warn {
+  my ($self, $msg) = @_;
+
+  $self->_add_log(20, $msg)
+    if $self->{log_level} >= 20;
 }
 
 sub info {
-  $_[0]->_add_log('INFO', $_[1]);
+  my ($self, $msg) = @_;
+
+  $self->_add_log(30, $msg)
+    if $self->{log_level} >= 30;
 }
 
 sub debug {
-  $_[0]->_add_log('DEBUG', $_[1]);
+  my ($self, $msg) = @_;
+
+  $self->_add_log(40, $msg)
+    if $self->{log_level} >= 40;
 }
 
 
@@ -59,30 +94,17 @@ sub timer {
 
   croak "timer $name already registered" if defined $self->{msg}->{timers}->{$name};
 
-  my $timer_start = Time::HiRes::time() - $self->{msg}->{start};
-  $timer_start = 0 if $timer_start < 0.0001;
+  my $timer_start = format_time(Time::HiRes::time() - $self->{msg}->{start});
 
   $self->{msg}->{timers}->{$name} = [ $timer_start, ];
 
   my $msg = $self->{msg};
 
   return guard {
-    my $timer_end = Time::HiRes::time() - $msg->{start};
-    $timer_end = 0 if $timer_end < 0.0001;
+    my $timer_end = format_time(Time::HiRes::time() - $msg->{start});
 
     push @{$msg->{timers}->{$name}}, $timer_end;
   }
-}
-
-sub event {
-  my ($self, $name) = @_;
-
-  croak "event $name already occured" if defined $self->{msg}->{events}->{$name};
-
-  my $event_time = Time::HiRes::time() - $self->{msg}->{start};
-  $event_time = 0 if $event_time < 0.0001;
-
-  $self->{msg}->{events}->{$name} = $event_time;
 }
 
 sub data {
@@ -98,15 +120,22 @@ sub data {
 #### INTERNAL ####
 
 sub _add_log {
-  my ($self, $tag, $log) = @_;
+  my ($self, $verbosity, $log) = @_;
 
   chomp $log;
 
-  my $time = Time::HiRes::time() - $self->{msg}->{start};
+  my $time = format_time(Time::HiRes::time() - $self->{msg}->{start});
 
-  $self->{msg}->{logs} .= "[$tag] $time: $log\n";
+  push @{$self->{msg}->{logs}}, [$verbosity, $time, $log];
 }
 
+sub format_time {
+  my $time = shift;
+
+  $time = 0 if $time < 0;
+
+  return 0.0 + sprintf("%.6f", $time);
+}
 
 
 1;
@@ -151,21 +180,39 @@ The simplest use case is outlined in the L<SYNOPSIS>. You create a new Log::Defe
 
 Why not just append messages to a string and then call your logger function once the transaction is complete?
 
-First, if a transaction has several possible paths it can take, there is no need to manually ensure that every possible path ends up calling your logging routine at the end.
+First, if a transaction has several possible paths it can take, there is no need to manually ensure that every possible path ends up calling your logging routine at the end. The log writing will be deferred until the logger object is destroyed.
 
-Second, Log::Defer makes it easy to gather timing information about the various stages of your request. This is explained further below.
+Second, in an asynchronous application where multiple asynchronous tasks are kicked off concurrently, if each task keeps a reference to the logger object, the log writing will be deferred until all tasks are finished.
+
+Finally, Log::Defer makes it easy to gather timing information about the various stages of your request. This is explained further below.
 
 
 
 
 =head1 LOG MESSAGES
 
+Log::Defer objects provide a very basic "log level" system that should be familiar. In order of decreasing verbosity, here are the possible methods:
+
+    $logger->debug("debug message");
+    $logger->info("info message");
+    $logger->warn("warn message");
+    $logger->error("error message");
+
+You can set your log level to muffle messages you aren't interested in. For example, the following logger object will only record C<warn> and C<error> logs:
+
+    my $logger = Log::Defer->new(
+                               sub { ... },
+                               level => 'warn',
+                             );
+
+The default log level is C<info>.
+
+In the deferred logging callback, the log messages are recorded in the C<logs> entry of the C<$msg> hash.
 
 
 
 
-
-=head1 TIMERS AND EVENTS
+=head1 TIMERS
 
 
     sub handle_request {
@@ -180,18 +227,38 @@ Second, Log::Defer makes it easy to gather timing information about the various 
       my $fetch_timer = $logger->('fetching results');
       async_fetch_results($headers, sub {
 
+        ## stop first timer by overwriting ref, start new timer
         $fetch_timer = $logger->('fetching results stage 2');
-        async_fetch_results($headers, sub {
 
+        async_fetch_results_stage_2($headers, sub {
+
+          $logger; ## keep reference alive
           undef $fetch_timer;
           send_response();
-          undef $logger; ## write out log
+
+        });
+
+        my $update_cache_timer = $logger->('update cache');
+
+        async_update_cach(sub {
+
+          $logger; ## keep reference alive
+          undef $update_cache_timer;
 
         });
 
       });
     }
 
+
+
+    total time               |============================================|
+    parsing request          |======|
+    fetching results                |==========|
+    fetching results stage 2                   |==========================|
+    update cache                               |==========|
+                             0                 0.05073                    0.129351
+                                    0.0012                 0.084622
 
 
 

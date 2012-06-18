@@ -1,9 +1,10 @@
 use strict;
 
-use Test::More tests => 19;
+use Test::More tests => 22;
 
 use Log::Defer;
 use Data::Dumper;
+use JSON::XS;
 
 
 my $triggered;
@@ -11,16 +12,23 @@ my $triggered;
 my $log = Log::Defer->new(sub {
   my $msg = shift;
 
-  print Dumper($msg) . "\n";
+  #print Dumper($msg) . "\n";
+  print JSON::XS->new->pretty(1)->encode($msg) . "\n";
 
   ## start/end time
 
   ok(exists $msg->{start}, 'start is there');
   ok(exists $msg->{end}, 'end is there');
 
-  ## log messages
+  ## log messages (debug message excluded from default log level)
 
-  ok($msg->{logs} =~ m{QQQ I.*?QQQ D.*?QQQ E}s);
+  is(@{$msg->{logs}}, 3, 'three log msgs');
+  is($msg->{logs}->[0]->[0], 20);
+  is($msg->{logs}->[0]->[2], 'QQQ W');
+  is($msg->{logs}->[1]->[0], 30);
+  is($msg->{logs}->[1]->[2], 'QQQ I');
+  is($msg->{logs}->[2]->[0], 10);
+  is($msg->{logs}->[2]->[2], 'QQQ E');
 
   ## timers
 
@@ -38,12 +46,6 @@ my $log = Log::Defer->new(sub {
   ok($msg->{timers}->{junktimer}->[1] <= $msg->{timers}->{junktimer3}->[0]);
   ok($msg->{timers}->{junktimer3}->[1] <= $msg->{timers}->{junktimer2}->[1]);
 
-  ## events
-
-  ok(exists $msg->{events}->{junkevent});
-  ok($msg->{timers}->{junktimer}->[1] <= $msg->{events}->{junkevent});
-  ok($msg->{events}->{junkevent} <= $msg->{timers}->{junktimer3}->[0]);
-
   ## data
 
   ok($msg->{data}->{junkdata} == 123);
@@ -52,7 +54,7 @@ my $log = Log::Defer->new(sub {
 });
 
 
-$log->info('QQQ I');
+$log->warn('QQQ W');
 
 $log->data->{junkdata} = 123;
 
@@ -63,7 +65,6 @@ select undef,undef,undef,0.1;
 
 undef $timer;
 
-$log->event('junkevent');
 $log->debug('QQQ D');
 
 my $timer3 = $log->timer('junktimer3');
@@ -72,6 +73,7 @@ select undef,undef,undef,0.1;
 
 undef $timer3;
 
+$log->info('QQQ I');
 $log->error('QQQ E');
 
 ok(!$triggered, "logging hasn't happened yet");
