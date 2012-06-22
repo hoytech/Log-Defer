@@ -146,7 +146,7 @@ __END__
 
 =head1 NAME
 
-Log::Defer -
+Log::Defer - Deferred logs and timers
 
 
 =head1 SYNOPSIS
@@ -210,23 +210,37 @@ In the deferred logging callback, the log messages are recorded in the C<logs> e
 
 
 
+=head1 DATA
+
+Instead of log messages that are ordered and include timestamp/verbosity information, you can directly access a C<data> hash reference with the C<data> method:
+
+    $log->data->{junkdata} = 'some data';
+
+
+
+
 =head1 TIMERS
 
+Timer objects can be created by calling the C<timer> method on the logger object. This method should be passed a description of what you are timing.
+
+The timer starts as soon as the timer object is created and only stops once the last reference to the timer is overwritten or go out of scope.
+
+Here is a fairly complicated example that includes concurrent timers:
 
     sub handle_request {
       my $request = shift;
       my $logger = Log::Defer->new(\&my_logging_function);
 
       my $headers = do {
-        my $parse_timer = $logger->('parsing request');
+        my $parse_timer = $logger->timer('parsing request');
         parse_request($request);
       };
 
-      my $fetch_timer = $logger->('fetching results');
+      my $fetch_timer = $logger->timer('fetching results');
       async_fetch_results($headers, sub {
 
-        ## stop first timer by overwriting ref, start new timer
-        $fetch_timer = $logger->('fetching results stage 2');
+        ## stop first timer by undefing ref, then start new timer
+        undef $fetch_timer; $fetch_timer = $logger->timer('fetching results stage 2');
 
         async_fetch_results_stage_2($headers, sub {
 
@@ -236,7 +250,7 @@ In the deferred logging callback, the log messages are recorded in the C<logs> e
 
         });
 
-        my $update_cache_timer = $logger->('update cache');
+        my $update_cache_timer = $logger->timer('update cache');
 
         async_update_cach(sub {
 
@@ -250,6 +264,54 @@ In the deferred logging callback, the log messages are recorded in the C<logs> e
 
 
 
+
+=head1 STRUCTURED LOGS
+
+So what is the whole point of this module? It's not only designed to be convenient to use (most logging libraries are) but also produce "structured" log messages that are easily machine parseable. Specifically, they are recorded as JSON data structures like the following:
+
+    {
+       "start" : 1340353046.93565,
+       "end" : 1340353047.13803,
+       "logs" : [
+          [
+             0.000158,
+             30,
+             "This is an info message (verbosity=30)"
+          ],
+          [
+             0.201223,
+             20,
+             "Warning. Here is some other data:",
+             {
+                 "whatever" : 987
+             },
+          ]
+       ],
+       "data" : {
+          "junkdata" : "some data"
+       },
+       "timers" : {
+          "junktimer" : [
+             0.000224,
+             0.100655
+          ],
+          "junktimer2" : [
+             0.000281,
+             0.202386
+          ]
+       },
+    }
+
+
+C<start> and C<end> times are absolute (from epoch) L<Time::HiRes> values. All other times are relative offsets from the C<start> time.
+
+
+
+=head1 FUTURE WORK
+
+We should be able to do some cool stuff with strucutured logs. Here's a mock-up of something we can render given structured timer data:
+
+
     total time               |============================================|
     parsing request          |======|
     fetching results                |==========|
@@ -258,10 +320,15 @@ In the deferred logging callback, the log messages are recorded in the C<logs> e
                              0                 0.05073                    0.129351
                                     0.0012                 0.084622
 
+Log messages should be versioned and the version bumped when backwards incompatible changes are made.
+
+C<end> should be relative offset from C<start> time too.
+
+Sometimes I'm still getting scientific notation even after sprintf(%f)... Must be the C<0.0 +>.
+
+Probably no need to support log level filtering at this module's level... The user can always grep the log messages manually.
 
 
-
-=head1 DATA
 
 
 
