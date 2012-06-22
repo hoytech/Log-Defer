@@ -61,30 +61,30 @@ sub new {
 
 
 sub error {
-  my ($self, $msg) = @_;
+  my ($self, @logs) = @_;
 
-  $self->_add_log(10, $msg)
+  $self->_add_log(10, @logs)
     if $self->{log_level} >= 10;
 }
 
 sub warn {
-  my ($self, $msg) = @_;
+  my ($self, @logs) = @_;
 
-  $self->_add_log(20, $msg)
+  $self->_add_log(20, @logs)
     if $self->{log_level} >= 20;
 }
 
 sub info {
-  my ($self, $msg) = @_;
+  my ($self, @logs) = @_;
 
-  $self->_add_log(30, $msg)
+  $self->_add_log(30, @logs)
     if $self->{log_level} >= 30;
 }
 
 sub debug {
-  my ($self, $msg) = @_;
+  my ($self, @logs) = @_;
 
-  $self->_add_log(40, $msg)
+  $self->_add_log(40, @logs)
     if $self->{log_level} >= 40;
 }
 
@@ -120,13 +120,11 @@ sub data {
 #### INTERNAL ####
 
 sub _add_log {
-  my ($self, $verbosity, $log) = @_;
-
-  chomp $log;
+  my ($self, $verbosity, @logs) = @_;
 
   my $time = format_time(Time::HiRes::time() - $self->{msg}->{start});
 
-  push @{$self->{msg}->{logs}}, [$verbosity, $time, $log];
+  push @{$self->{msg}->{logs}}, [$time, $verbosity, @logs];
 }
 
 sub format_time {
@@ -193,10 +191,10 @@ Finally, Log::Defer makes it easy to gather timing information about the various
 
 Log::Defer objects provide a very basic "log level" system that should be familiar. In order of decreasing verbosity, here are the possible methods:
 
-    $logger->debug("debug message");
-    $logger->info("info message");
-    $logger->warn("warn message");
-    $logger->error("error message");
+    $logger->debug("debug message");  # 40
+    $logger->info("info message");    # 30
+    $logger->warn("warn message");    # 20
+    $logger->error("error message");  # 10
 
 You can set your log level to muffle messages you aren't interested in. For example, the following logger object will only record C<warn> and C<error> logs:
 
