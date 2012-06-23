@@ -1,6 +1,6 @@
 use strict;
 
-use Test::More tests => 24;
+use Test::More tests => 26;
 
 use Log::Defer;
 use Data::Dumper;
@@ -22,15 +22,17 @@ my $log = Log::Defer->new(sub {
 
   ## log messages (debug message excluded from default log level)
 
-  is(@{$msg->{logs}}, 3, 'three log msgs');
+  is(@{$msg->{logs}}, 4, 'three log msgs');
   is($msg->{logs}->[0]->[1], 20);
   is($msg->{logs}->[0]->[2], 'QQQ W');
   is($msg->{logs}->[0]->[3], 'HELLO');
   is($msg->{logs}->[0]->[4], 888);
-  is($msg->{logs}->[1]->[1], 30);
-  is($msg->{logs}->[1]->[2], 'QQQ I');
-  is($msg->{logs}->[2]->[1], 10);
-  is($msg->{logs}->[2]->[2], 'QQQ E');
+  is($msg->{logs}->[1]->[1], 40);
+  is($msg->{logs}->[1]->[2], 'QQQ D');
+  is($msg->{logs}->[2]->[1], 30);
+  is($msg->{logs}->[2]->[2], 'QQQ I');
+  is($msg->{logs}->[3]->[1], 10);
+  is($msg->{logs}->[3]->[2], 'QQQ E');
 
   ## timers
 

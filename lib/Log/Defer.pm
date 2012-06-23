@@ -10,13 +10,6 @@ use Carp qw/croak/;
 use Guard;
 
 
-my $log_levels = {
-  error => 10,
-  warn => 20,
-  info => 30,
-  debug => 40,
-};
-
 sub new {
   my ($class, $cb, %args) = @_;
   my $self = {};
@@ -30,18 +23,6 @@ sub new {
   };
 
   $self->{msg} = $msg;
-
-  if (exists $args{level}) {
-    if ($args{level} =~ /^\d+$/) {
-      $self->{log_level} = $args{level};
-    } else {
-      $self->{log_level} = $log_levels->{$args{level}};
-      croak "bad level value (should be an error level name or a positive integer)"
-        if !defined $self->{log_level};
-    }
-  } else {
-    $self->{log_level} = 30;
-  }
 
   $self->{guard} = guard {
     my $end_time = format_time(Time::HiRes::time());
@@ -63,29 +44,25 @@ sub new {
 sub error {
   my ($self, @logs) = @_;
 
-  $self->_add_log(10, @logs)
-    if $self->{log_level} >= 10;
+  $self->_add_log(10, @logs);
 }
 
 sub warn {
   my ($self, @logs) = @_;
 
-  $self->_add_log(20, @logs)
-    if $self->{log_level} >= 20;
+  $self->_add_log(20, @logs);
 }
 
 sub info {
   my ($self, @logs) = @_;
 
-  $self->_add_log(30, @logs)
-    if $self->{log_level} >= 30;
+  $self->_add_log(30, @logs);
 }
 
 sub debug {
   my ($self, @logs) = @_;
 
-  $self->_add_log(40, @logs)
-    if $self->{log_level} >= 40;
+  $self->_add_log(40, @logs);
 }
 
 
@@ -196,16 +173,19 @@ Log::Defer objects provide a very basic "log level" system that should be famili
     $logger->warn("warn message");    # 20
     $logger->error("error message");  # 10
 
-You can set your log level to muffle messages you aren't interested in. For example, the following logger object will only record C<warn> and C<error> logs:
+The only thing that this module does with the log level is include it in your log message.
 
-    my $logger = Log::Defer->new(
-                               sub { ... },
-                               level => 'warn',
-                             );
+Here is an example of logging:
 
-The default log level is C<info>.
+    $logger->warn("something weird happened", { username => $username });
 
-In the deferred logging callback, the log messages are recorded in the C<logs> entry of the C<$msg> hash.
+In the deferred logging callback, the log messages are recorded in the C<logs> element of the C<$msg> hash. It is an array ref and here would be the element pushed onto it by the C<warn> method above:
+
+    [ 0.201223, 20, "something weird happened", { username => "jimmy" } ]
+
+The first element is a timestamp of when the C<warn> method was called in seconds since the C<start> (see L<TIMERS> below).
+
+The second element is the verbosity level. If you wish to implement "log levels" (ie filter out debug messages), you can L<grep> them out when your recording callback is called.
 
 
 
@@ -325,9 +305,8 @@ We should be able to do some cool stuff with strucutured logs. Here's a mock-up 
 
 Log messages should be versioned and the version bumped when backwards incompatible changes are made.
 
-Sometimes I'm still getting scientific notation even after sprintf(%f)... Must be the C<0.0 +>.
+Sometimes I'm still getting scientific notation even after sprintf(%f) from... Must be the C<0.0 +>.
 
-Probably no need to support log level filtering at this module's level... The user can always grep the log messages manually.
 
 
 
