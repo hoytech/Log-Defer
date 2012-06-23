@@ -11,14 +11,13 @@ use Guard;
 
 
 sub new {
-  my ($class, $cb, %args) = @_;
+  my ($class, $cb) = @_;
   my $self = {};
   bless $self, $class;
 
   croak "must provide callback to Log::Defer" unless $cb && ref $cb eq 'CODE';
 
   my $msg = {
-    logs => [],
     start => format_time(Time::HiRes::time),
   };
 
@@ -29,9 +28,11 @@ sub new {
     my $duration = format_time($end_time - $msg->{start});
     $msg->{end} = $duration;
 
-    foreach my $name (keys %{$msg->{timers}}) {
-      push @{$msg->{timers}->{$name}}, $duration
-        if @{$msg->{timers}->{$name}} == 1;
+    if (exists $msg->{timers}) {
+      foreach my $name (keys %{$msg->{timers}}) {
+        push @{$msg->{timers}->{$name}}, $duration
+          if @{$msg->{timers}->{$name}} == 1;
+      }
     }
 
     $cb->($msg);
@@ -129,57 +130,82 @@ Log::Defer - Deferred logs and timers
 =head1 SYNOPSIS
 
     use Log::Defer;
+    use JSON::XS; ## or whatever
 
     my $logger = Log::Defer->new(\&my_logger_function);
-    $logger->info("some info message");
+    $logger->info("hello world");
     undef $logger; # write out log message
 
     sub my_logger_function {
       my $msg = shift;
-      print STDERR $msg->{logs};
+      print JSON::XS->new->pretty(1)->encode($msg);
+    }
+
+Prints:
+
+    {
+       "start" : 1340421702.16684,
+       "end" : 0.000249,
+       "logs" : [
+          [
+             0.000147,
+             30,
+             "hello world"
+          ]
+       ]
     }
 
 
 
 =head1 DESCRIPTION
 
-B<This module doesn't actually log anything!> To use this module you also need a logging library (some of them are mentioned in L<SEE ALSO>).
+B<This module doesn't actually log anything!> To use this module for normal logging purposes you also need a logging library (some of them are mentioned in L<SEE ALSO>).
 
-B<WARNING:> This module is still under development and the API and resulting messages aren't yet considered stable.
+What this module does is allow you to defer recording log messages until after some kind of "transaction" has completed. Typically this transaction is something like an HTTP request or a cron job. Generally log messages are easier to read if they are recorded "atomically" and are not intermingled with log messages created by other transactions.
 
-If you're not scared off yet, please read on.
+This module preserves as much structure as possible which allows you to record easily machine-parseable log messages if you so choose.
 
-What this module does is allow you to defer recording log messages until after some kind of "transaction" has completed. Typically this transaction is something like an HTTP request or a cron job. Generally log messages are easier to read if they are recorded "atomically" and not intermingled with log messages created by other requests.
 
-The simplest use case is outlined in the L<SYNOPSIS>. You create a new Log::Defer object and pass in a coderef. This coderef will be called with a message hash reference (C<$msg>) once the Log::Defer object is destroyed, ie once all references to the object are overwritten or go out of scope.
 
-Why not just append messages to a string and then call your logger function once the transaction is complete?
+=head1 USAGE
 
-First, if a transaction has several possible paths it can take, there is no need to manually ensure that every possible path ends up calling your logging routine at the end. The log writing will be deferred until the logger object is destroyed.
+The simplest use case is outlined in the L<SYNOPSIS>. You create a new Log::Defer object and pass in a code ref. This code ref will be called with a hash reference once the Log::Defer object is destroyed, or all references to the object go out of scope.
 
-Second, in an asynchronous application where multiple asynchronous tasks are kicked off concurrently, if each task keeps a reference to the logger object, the log writing will be deferred until all tasks are finished.
+If a transaction has several possible paths it can take, there is no need to manually ensure that every possible path ends up calling your logging routine at the end. The log writing will be deferred until the logger object is destroyed or goes out of scope.
 
-Finally, Log::Defer makes it easy to gather timing information about the various stages of your request. This is explained further below.
+In an asynchronous application where multiple asynchronous tasks are kicked off concurrently, if each task keeps a reference to the logger object, the log writing will be deferred until all tasks are finished.
 
+Log::Defer makes it easy to gather timing information about the various stages of your request. This is explained further below.
+
+
+
+
+=head1 STRUCTURED LOGS
+
+So what is the point of this module? Most logging libraries are convenient to use, often even more-so than Log::Defer. However, this module allows you to record log messages in a format that can be easily analysed if you so choose.
+
+Line-based log protocols are nice because they are compact and since people are used to them they are "easy" to read.
+
+However, doing analysis on line-based or, even worse, ad-hoc unstructured multi-line formats is more difficult than it needs to be. And given the right tools, maybe reading structured log messages will actually be easier than reading line-based logs.
 
 
 
 =head1 LOG MESSAGES
 
-Log::Defer objects provide a very basic "log level" system that should be familiar. In order of decreasing verbosity, here are the possible methods:
+Log::Defer objects provide a very basic "log level" system that should be familiar. In order of increasing verbosity, here are the possible logging methods:
 
-    $logger->debug("debug message");  # 40
-    $logger->info("info message");    # 30
-    $logger->warn("warn message");    # 20
-    $logger->error("error message");  # 10
+    $logger->error("...");  # 10
+    $logger->warn("...");   # 20
+    $logger->info("...");   # 30
+    $logger->debug("...");  # 40
 
-The only thing that this module does with the log level is include it in your log message.
+The only thing that this module does with the log level is record it in the log message.
 
-Here is an example of logging:
+Here is an example of issuing a warning:
 
     $logger->warn("something weird happened", { username => $username });
 
-In the deferred logging callback, the log messages are recorded in the C<logs> element of the C<$msg> hash. It is an array ref and here would be the element pushed onto it by the C<warn> method above:
+In the deferred logging callback, the log messages are recorded in the C<logs> element of the C<$msg> hash. It is an array ref and here would be the element pushed onto C<logs> by the C<warn> method call above:
 
     [ 0.201223, 20, "something weird happened", { username => "jimmy" } ]
 
@@ -192,10 +218,11 @@ The second element is the verbosity level. If you wish to implement "log levels"
 
 =head1 DATA
 
-Instead of log messages that are ordered and include timestamp/verbosity information, you can directly access a C<data> hash reference with the C<data> method:
+Instead of log messages, you can directly access a C<data> hash reference with the C<data> method:
 
     $log->data->{junkdata} = 'some data';
 
+This is useful for recording info related to a whole transaction like say a connecting IP address. Anything you put in the C<data> hash reference will be passed along untouched to your defered callback.
 
 
 
@@ -203,7 +230,7 @@ Instead of log messages that are ordered and include timestamp/verbosity informa
 
 Timer objects can be created by calling the C<timer> method on the logger object. This method should be passed a description of what you are timing.
 
-The timer starts as soon as the timer object is created and only stops once the last reference to the timer is overwritten or go out of scope.
+The timer starts as soon as the timer object is created and only stops once the last reference to the timer is destroyed or goes out of scope, or if the logger object itself is destroyed/goes out of scope.
 
 Here is a fairly complicated example that includes concurrent timers:
 
@@ -220,9 +247,9 @@ Here is a fairly complicated example that includes concurrent timers:
       async_fetch_results($headers, sub {
 
         ## stop first timer by undefing ref, then start new timer
-        undef $fetch_timer; $fetch_timer = $logger->timer('fetching results stage 2');
+        undef $fetch_timer; $fetch_timer = $logger->timer('fetching stage 2');
 
-        async_fetch_results_stage_2($headers, sub {
+        async_fetch_stage_2($headers, sub {
 
           $logger; ## keep reference alive
           undef $fetch_timer;
@@ -245,11 +272,9 @@ Here is a fairly complicated example that includes concurrent timers:
 
 
 
-=head1 STRUCTURED LOGS
+=head1 EXAMPLE LOG MESSAGE
 
-So what is the whole point of this module? It's not only designed to be convenient to use (most logging libraries are) but also to produce "structured" log messages that are easily machine parseable.
-
-Each structured log message will be passed as a perl data-structure to the callback passed to the C<new> constructor. What you do with that is up to you.
+Each structured log message will be passed into the callback provided to C<new>. The message is a perl hash reference that contains various other perl data-structures. What you do at this point is up to you.
 
 What follows is a prettified example of a JSON-encoded log message. Normally all unnecessary white-space is removed and it is stored on a single line so that ad-hoc command-line C<grep>ing still works.
 
@@ -287,25 +312,20 @@ What follows is a prettified example of a JSON-encoded log message. Normally all
     }
 
 
-C<start> is an absolute timestamp (from epoch) L<Time::HiRes> values. All other times are relative offsets from the C<start> time.
+C<start> is a L<Time::HiRes> absolute timestamp. All other times are relative offsets from this C<start> time. Everything is in seconds.
 
 
 
 =head1 FUTURE WORK
 
-We should be able to do some cool stuff with strucutured logs. Here's a mock-up of something we can render given structured timer data:
+We plan do some cool stuff with structured logs. Here's a mock-up of a timer rendering idea:
 
-
-    parsing request          |======|
-    fetching results                |==========|
-    fetching results stage 2                   |==========================|
-    update cache                               |==========|
-                             0                 0.05073                    0.129351
-                                    0.0012                 0.084622
-
-Log messages should be versioned and the version bumped when backwards incompatible changes are made.
-
-Sometimes I'm still getting scientific notation even after sprintf(%f) from... Must be the C<0.0 +>.
+    parsing request       |======|
+    fetching results             |==========|
+    fetching stage 2                        |==========================|
+    update cache                            |==========|
+                          0                 0.05073                    0.129351
+                                 0.0012                 0.084622
 
 
 
@@ -317,9 +337,9 @@ Sometimes I'm still getting scientific notation even after sprintf(%f) from... M
 
 =head1 SEE ALSO
 
-As mentioned above, this module doesn't actually log messages so you still must use some other module to write your log messages. There are many libraries on CPAN that can do this and there should be at least one that fits your requirements. Some examples are: L<Sys::Syslog>, L<Log::Dispatch>, L<Log::Handler>, L<Log::Log4perl>, L<Log::Fast>, L<AnyEvent::Log>.
+As mentioned above, this module doesn't actually log messages to disk/syslog/anything so you still must use some other module to record your log messages. There are many libraries on CPAN that can do this and there should be at least one that fits your requirements. Some examples are: L<Sys::Syslog>, L<Log::Dispatch>, L<Log::Handler>, L<Log::Log4perl>, L<Log::Fast>, L<AnyEvent::Log>.
 
-There are also many other libraries that can help timing/metering your requests: L<Devel::Timer>, L<Timer::Simple>, L<Benchmark::Timer>, L<Time::Stopwatch>, L<Time::SoFar>.
+Some caveats related to non-monotonous clocks are discussed in L<Time::HiRes>.
 
 
 
