@@ -45,8 +45,8 @@ sub new {
 
   $self->{guard} = guard {
     my $end_time = format_time(Time::HiRes::time());
-    $msg->{end} = $end_time;
     my $duration = format_time($end_time - $msg->{start});
+    $msg->{end} = $duration;
 
     foreach my $name (keys %{$msg->{timers}}) {
       push @{$msg->{timers}->{$name}}, $duration
@@ -267,11 +267,15 @@ Here is a fairly complicated example that includes concurrent timers:
 
 =head1 STRUCTURED LOGS
 
-So what is the whole point of this module? It's not only designed to be convenient to use (most logging libraries are) but also produce "structured" log messages that are easily machine parseable. Specifically, they are recorded as JSON data structures like the following:
+So what is the whole point of this module? It's not only designed to be convenient to use (most logging libraries are) but also to produce "structured" log messages that are easily machine parseable.
+
+Each structured log message will be passed as a perl data-structure to the callback passed to the C<new> constructor. What you do with that is up to you.
+
+What follows is a prettified example of a JSON-encoded log message. Normally all unnecessary white-space is removed and it is stored on a single line so that ad-hoc command-line C<grep>ing still works.
 
     {
        "start" : 1340353046.93565,
-       "end" : 1340353047.13803,
+       "end" : 0.202386,
        "logs" : [
           [
              0.000158,
@@ -281,10 +285,10 @@ So what is the whole point of this module? It's not only designed to be convenie
           [
              0.201223,
              20,
-             "Warning. Here is some other data:",
+             "Warning! \n\n Here is some more data:",
              {
                  "whatever" : 987
-             },
+             }
           ]
        ],
        "data" : {
@@ -299,11 +303,11 @@ So what is the whole point of this module? It's not only designed to be convenie
              0.000281,
              0.202386
           ]
-       },
+       }
     }
 
 
-C<start> and C<end> times are absolute (from epoch) L<Time::HiRes> values. All other times are relative offsets from the C<start> time.
+C<start> is an absolute timestamp (from epoch) L<Time::HiRes> values. All other times are relative offsets from the C<start> time.
 
 
 
@@ -312,7 +316,6 @@ C<start> and C<end> times are absolute (from epoch) L<Time::HiRes> values. All o
 We should be able to do some cool stuff with strucutured logs. Here's a mock-up of something we can render given structured timer data:
 
 
-    total time               |============================================|
     parsing request          |======|
     fetching results                |==========|
     fetching results stage 2                   |==========================|
@@ -321,8 +324,6 @@ We should be able to do some cool stuff with strucutured logs. Here's a mock-up 
                                     0.0012                 0.084622
 
 Log messages should be versioned and the version bumped when backwards incompatible changes are made.
-
-C<end> should be relative offset from C<start> time too.
 
 Sometimes I'm still getting scientific notation even after sprintf(%f)... Must be the C<0.0 +>.
 
