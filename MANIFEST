@@ -6,4 +6,5 @@ MANIFEST.SKIP
 MYMETA.json
 MYMETA.yml
 README
-t/basic.t
+t/empty.t
+t/full.t
