@@ -163,17 +163,17 @@ B<This module doesn't actually log anything!> To use this module for normal logg
 
 What this module does is allow you to defer recording log messages until after some kind of "transaction" has completed. Typically this transaction is something like an HTTP request or a cron job. Generally log messages are easier to read if they are recorded "atomically" and are not intermingled with log messages created by other transactions.
 
-This module preserves as much structure as possible which allows you to record easily machine-parseable log messages if you so choose.
+This module preserves as much structure as possible which allows you to record machine-parseable log messages if you so choose.
 
 
 
 =head1 USAGE
 
-The simplest use case is outlined in the L<SYNOPSIS>. You create a new Log::Defer object and pass in a code ref. This code ref will be called with a hash reference once the Log::Defer object is destroyed, or all references to the object go out of scope.
+The simplest use case is outlined in the L<SYNOPSIS>. You create a new Log::Defer object and pass in a code ref. This code ref will be called once the Log::Defer object is destroyed or all references to the object go out of scope.
 
 If a transaction has several possible paths it can take, there is no need to manually ensure that every possible path ends up calling your logging routine at the end. The log writing will be deferred until the logger object is destroyed or goes out of scope.
 
-In an asynchronous application where multiple asynchronous tasks are kicked off concurrently, if each task keeps a reference to the logger object, the log writing will be deferred until all tasks are finished.
+In an asynchronous application where multiple asynchronous tasks are kicked off concurrently, each task can keep a reference to the logger object and the log writing will be deferred until all tasks are finished.
 
 Log::Defer makes it easy to gather timing information about the various stages of your request. This is explained further below.
 
@@ -182,17 +182,17 @@ Log::Defer makes it easy to gather timing information about the various stages o
 
 =head1 STRUCTURED LOGS
 
-So what is the point of this module? Most logging libraries are convenient to use, often even more-so than Log::Defer. However, this module allows you to record log messages in a format that can be easily analysed if you so choose.
+So what is the point of this module? Most logging libraries are convenient to use, usually even more-so than Log::Defer. However, this module allows you to record log messages in a format that can be easily analysed if you so choose.
 
 Line-based log protocols are nice because they are compact and since people are used to them they are "easy" to read.
 
-However, doing analysis on line-based or, even worse, ad-hoc unstructured multi-line formats is more difficult than it needs to be. And given the right tools, maybe reading structured log messages will actually be easier than reading line-based logs.
+However, doing analysis on line-based or, even worse, ad-hoc unstructured multi-line formats is more difficult than it needs to be. And given the right tools, reading structured log messages can actually be easier than reading line-based logs.
 
 
 
 =head1 LOG MESSAGES
 
-Log::Defer objects provide a very basic "log level" system that should be familiar. In order of increasing verbosity, here are the possible logging methods:
+Log::Defer objects provide a very basic "log level" system. In order of increasing verbosity, here are the possible logging methods:
 
     $logger->error("...");  # 10
     $logger->warn("...");   # 20
@@ -231,6 +231,8 @@ This is useful for recording info related to a whole transaction like say a conn
 Timer objects can be created by calling the C<timer> method on the logger object. This method should be passed a description of what you are timing.
 
 The timer starts as soon as the timer object is created and only stops once the last reference to the timer is destroyed or goes out of scope, or if the logger object itself is destroyed/goes out of scope.
+
+When the logger object is first created, the current time is recorded and is stored in the C<start> element of the log hash. C<start> is a L<Time::HiRes> absolute timestamp. All other times are relative offsets from this C<start> time. Everything is in seconds.
 
 Here is a fairly complicated example that includes concurrent timers:
 
@@ -276,7 +278,7 @@ Here is a fairly complicated example that includes concurrent timers:
 
 Each structured log message will be passed into the callback provided to C<new>. The message is a perl hash reference that contains various other perl data-structures. What you do at this point is up to you.
 
-What follows is a prettified example of a JSON-encoded log message. Normally all unnecessary white-space is removed and it is stored on a single line so that ad-hoc command-line C<grep>ing still works.
+What follows is a prettified example of a JSON-encoded log message. Normally all unnecessary white-space would be removed and it would be stored on a single line so that ad-hoc command-line C<grep>ing still works.
 
     {
        "start" : 1340353046.93565,
@@ -311,8 +313,6 @@ What follows is a prettified example of a JSON-encoded log message. Normally all
        }
     }
 
-
-C<start> is a L<Time::HiRes> absolute timestamp. All other times are relative offsets from this C<start> time. Everything is in seconds.
 
 
 
