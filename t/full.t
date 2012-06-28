@@ -3,8 +3,8 @@ use strict;
 use Test::More tests => 26;
 
 use Log::Defer;
-use Data::Dumper;
-use JSON::XS;
+#use Data::Dumper;
+#use JSON::XS;
 
 
 my $triggered;
@@ -13,7 +13,7 @@ my $log = Log::Defer->new(sub {
   my $msg = shift;
 
   #print Dumper($msg) . "\n";
-  print JSON::XS->new->pretty(1)->encode($msg) . "\n";
+  #print JSON::XS->new->pretty(1)->encode($msg) . "\n";
 
   ## start/end time
 
