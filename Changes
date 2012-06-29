@@ -1,3 +1,6 @@
+0.02   2012-06-28
+  * Version number fix
+
 0.1.1   2012-06-17
   * Test accidentally depended on JSON::XS
 
