@@ -109,22 +109,24 @@ This is useful for recording info related to a whole transaction like say a conn
 
 =head1 TIMERS
 
-Timer objects can be created by calling the C<timer> method on the logger object. This method should be passed a description of what you are timing.
+When the logger object is first created, the current time is recorded and is stored in the C<start> element of the log hash. However, you can record timing data of sub-portions of your transaction with timer objects.
 
-The timer starts as soon as the timer object is created and only stops once the last reference to the timer is destroyed or goes out of scope, or if the logger object itself is destroyed/goes out of scope.
+Timer objects are created by calling the C<timer> method on the logger object. This method should be passed a description of what you are timing.
 
-When the logger object is first created, the current time is recorded and is stored in the C<start> element of the log hash. C<start> is a L<Time::HiRes> absolute timestamp. All other times are relative offsets from this C<start> time. Everything is in seconds.
+The timer starts as soon as the timer object is created and stops once the last reference to the timer is destroyed or goes out of scope, or if the logger object itself is destroyed/goes out of scope.
 
-With the L<Log::Defer::Viz> module you can take your recorded timer data and rendering log messages that look like this:
+C<start> is a L<Time::HiRes> absolute timestamp. All other times are relative offsets from this C<start> time. Everything is in seconds.
 
-    doing main thing |==============================================|
-           DB lookup |==============|
-    reload blah blah                |=======================================|
-         fetch cache                |=====================|
-          sent reply                                                X
+With the L<Log::Defer::Viz> module you can take your recorded timer data and render log messages that look like this:
+
+     download file |===============================================|
+      cache lookup |==============|
+      update cache                |=========================================|
+         DB lookup                |======================|
+        sent reply                                                 X
     ________________________________________________________________________________
-    times in ms      0.2            32.4                            100.7
-                                                          80.7             119.2
+    times in ms    0.2            32.4                             100.7
+                                                         80.7              119.2
 
 Here is a fairly complicated example of using concurrent timers:
 

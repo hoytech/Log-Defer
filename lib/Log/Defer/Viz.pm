@@ -28,7 +28,7 @@ sub viz {
     my $timer = $timers->{$timer_name};
 
     $max_time = $timer->[1] if $timer->[1] > $max_time;
-    $max_namelen = length($timer_name) if length($timer_name) > $max_namelen;
+    $max_namelen = length($timer_name)+1 if length($timer_name)+1 > $max_namelen;
   }
 
 

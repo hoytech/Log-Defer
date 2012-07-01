@@ -8,7 +8,7 @@ use Log::Defer::Viz;
 
 
 print "\n\n" . Log::Defer::Viz::viz(timers => {
-          "doing main thing" => [
+          "download file" => [
              0.000224,
              0.100655
           ],
@@ -16,15 +16,15 @@ print "\n\n" . Log::Defer::Viz::viz(timers => {
              0.100663,
              0.100740
           ],
-          "fetch cache" => [
+          "DB lookup" => [
              0.032724,
              0.080655
           ],
-          "DB lookup" => [
+          "cache lookup" => [
              0.000281,
              0.032386
           ],
-          "reload blah blah" => [
+          "update cache" => [
              0.032380,
              0.119233
           ],
