@@ -20,7 +20,7 @@ my $log = Log::Defer->new(sub {
   ok(exists $msg->{start}, 'start is there');
   ok(exists $msg->{end}, 'end is there');
 
-  ## log messages (debug message excluded from default log level)
+  ## log messages
 
   is(@{$msg->{logs}}, 4, 'three log msgs');
   is($msg->{logs}->[0]->[1], 20);

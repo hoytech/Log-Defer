@@ -11,8 +11,21 @@ use Guard;
 
 
 sub new {
-  my ($class, $cb) = @_;
-  my $self = {};
+  my ($class, $cb, $opts) = @_;
+
+  if ($cb) {
+    if (ref $cb eq 'CODE') {
+      $opts ||= {};
+      croak "two callbacks provided" if $opts->{cb};
+    } elsif (ref $cb eq 'HASH') {
+      $opts = $cb;
+      $cb = $opts->{cb};
+    } else {
+      croak "first arg to new must be a coderef or hashref";
+    }
+  }
+
+  my $self = $opts;
   bless $self, $class;
 
   croak "must provide callback to Log::Defer" unless $cb && ref $cb eq 'CODE';
@@ -45,25 +58,37 @@ sub new {
 sub error {
   my ($self, @logs) = @_;
 
-  $self->_add_log(10, @logs);
+  $self->add_log(10, @logs);
 }
 
 sub warn {
   my ($self, @logs) = @_;
 
-  $self->_add_log(20, @logs);
+  $self->add_log(20, @logs);
 }
 
 sub info {
   my ($self, @logs) = @_;
 
-  $self->_add_log(30, @logs);
+  $self->add_log(30, @logs);
 }
 
 sub debug {
   my ($self, @logs) = @_;
 
-  $self->_add_log(40, @logs);
+  $self->add_log(40, @logs);
+}
+
+sub add_log {
+  my ($self, $verbosity, @logs) = @_;
+
+  if (!exists $self->{verbosity} || $verbosity <= $self->{verbosity}) {
+    my $time = format_time(Time::HiRes::time() - $self->{msg}->{start});
+
+    @logs = $logs[0]->() if $logs[0] && ref $logs[0] eq 'CODE';
+
+    push @{$self->{msg}->{logs}}, [$time, $verbosity, @logs];
+  }
 }
 
 
@@ -95,15 +120,8 @@ sub data {
 
 
 
+
 #### INTERNAL ####
-
-sub _add_log {
-  my ($self, $verbosity, @logs) = @_;
-
-  my $time = format_time(Time::HiRes::time() - $self->{msg}->{start});
-
-  push @{$self->{msg}->{logs}}, [$time, $verbosity, @logs];
-}
 
 sub format_time {
   my $time = shift;
@@ -132,7 +150,10 @@ Log::Defer - Deferred logs and timers
     use Log::Defer;
     use JSON::XS; ## or whatever
 
-    my $logger = Log::Defer->new(\&my_logger_function);
+    my $logger = Log::Defer->new({
+                                   cb => \&my_logger_function,
+                                   verbosity => 30,
+                                 });
 
     $logger->info("hello world");
 
@@ -204,7 +225,7 @@ Log::Defer objects provide a very basic "log level" system. In order of increasi
     $logger->info("...");   # 30
     $logger->debug("...");  # 40
 
-The only thing that this module does with the log level is record it in the log message.
+If you pass in a C<verbosity> argument, messages with a higher log level will not be included in the final log message. Otherwise, all log messages are included.
 
 Here is an example of issuing a warning:
 
@@ -218,6 +239,16 @@ The first element is a timestamp of when the C<warn> method was called in second
 
 The second element is the verbosity level. If you wish to implement "log levels" (ie filter out debug messages), you can L<grep> them out when your recording callback is called.
 
+
+
+
+=head1 DELAYED MESSAGE GENERATION
+
+If you would like to record complex messages in debug mode but don't want to burden your production systems with this overhead, you can use delayed message generation:
+
+    $logger->debug(sub { "Connection: " . dump_connection_info($conn) });
+
+The sub won't be evaluated unless the logger object is instantiated with C<verbosity> of 40 or higher (or you omit C<verbosity>).
 
 
 

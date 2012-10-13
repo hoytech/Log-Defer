@@ -8,7 +8,10 @@ Log::Defer - Deferred logs and timers
     use Log::Defer;
     use JSON::XS; ## or whatever
 
-    my $logger = Log::Defer->new(\&my_logger_function);
+    my $logger = Log::Defer->new({
+                                   cb => \&my_logger_function,
+                                   verbosity => 30,
+                                 });
 
     $logger->info("hello world");
 
@@ -80,7 +83,7 @@ Log::Defer objects provide a very basic "log level" system. In order of increasi
     $logger->info("...");   # 30
     $logger->debug("...");  # 40
 
-The only thing that this module does with the log level is record it in the log message.
+If you pass in a C<verbosity> argument, messages with a higher log level will not be included in the final log message. Otherwise, all log messages are included.
 
 Here is an example of issuing a warning:
 
@@ -94,6 +97,16 @@ The first element is a timestamp of when the C<warn> method was called in second
 
 The second element is the verbosity level. If you wish to implement "log levels" (ie filter out debug messages), you can L<grep> them out when your recording callback is called.
 
+
+
+
+=head1 DELAYED MESSAGE GENERATION
+
+If you would like to record complex messages in debug mode but don't want to burden your production systems with this overhead, you can use delayed message generation:
+
+    $logger->debug(sub { "Connection: " . dump_connection_info($conn) });
+
+The sub won't be evaluated unless the logger object is instantiated with C<verbosity> of 40 or higher (or you omit C<verbosity>).
 
 
 
