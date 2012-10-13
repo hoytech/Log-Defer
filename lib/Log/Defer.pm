@@ -187,7 +187,7 @@ Prints:
 
 B<This module doesn't actually log anything!> To use this module for normal logging purposes you also need a logging library (some of them are mentioned in L<SEE ALSO>).
 
-What this module does is allow you to defer recording log messages until after some kind of "transaction" has completed. Typically this transaction is something like an HTTP request or a cron job. Generally log messages are easier to read if they are recorded "atomically" and are not intermingled with log messages created by other transactions.
+What this module does is allow you to defer recording log messages until after some kind of transaction has completed. Typically this transaction is something like an HTTP request or a cron job. Generally log messages are easier to read if they are recorded atomically and are not intermingled with log messages created by other transactions.
 
 This module preserves as much structure as possible which allows you to record machine-parseable log messages if you so choose.
 
@@ -225,13 +225,13 @@ Log::Defer objects provide a very basic "log level" system. In order of increasi
     $logger->info("...");   # 30
     $logger->debug("...");  # 40
 
-Although you can also specify a custom log level:
+You can also specify a custom log level:
 
     $logger->add_log(25, "...");
 
-If you pass in a C<verbosity> argument, messages with a higher log level will not be included in the final log message. Otherwise, all log messages are included.
+If you pass in a C<verbosity> argument to the Log::Defer constructor, messages with a higher log level will not be included in the final log message. Otherwise, all log messages are included.
 
-Note that you can pass multiple arguments:
+Note that you can pass in multiple items to a log message and they don't even need to be strings:
 
     $logger->warn("something weird happened", { username => $username });
 
@@ -239,30 +239,27 @@ In the deferred logging callback, the log messages are recorded in the C<logs> e
 
     [ 0.201223, 20, "something weird happened", { username => "jimmy" } ]
 
-The first element is a timestamp of when the C<warn> method was called in seconds since the C<start> (see L<TIMERS> below).
-
-The second element is the verbosity level. If you wish to implement "log levels" (ie filter out debug messages), you can L<grep> them out when your recording callback is called.
-
+The first element is a timestamp of when the C<warn> method was called in seconds since the C<start> (see L<TIMERS> below) and the second element is the verbosity level.
 
 
 
 =head1 DELAYED MESSAGE GENERATION
 
-If you would like to record complex messages in debug mode but don't want to burden your production systems with this overhead, you can use delayed message generation:
+If you would like to compute complex messages in debug mode but don't want to burden your production systems with this overhead, you can use delayed message generation:
 
     $logger->debug(sub { "Connection: " . dump_connection_info($conn) });
 
-The sub won't be invoked unless the logger object is instantiated with C<verbosity> of 40 or higher (or you omit C<verbosity>).
+The sub won't be invoked unless the logger object is instantiated with C<verbosity> of 40 or higher (or you omit C<verbosity> altogether).
 
 
 
 =head1 DATA
 
-Instead of log messages, you can directly access a C<data> hash reference with the C<data> method:
+Instead of log messages, you can directly add items to a C<data> hash reference with the C<data> method:
 
-    $log->data->{junkdata} = 'some data';
+    $log->data->{ip} = $ENV{REMOTE_ADDR};
 
-This is useful for recording info related to a whole transaction like say a connecting IP address. Anything you put in the C<data> hash reference will be passed along untouched to your defered callback.
+This is useful for recording info related to a transaction. Anything you put in the C<data> hash reference will be passed along untouched to your defered callback. This is ideal for advanced automated parsing of log messages because the data is easily accessible.
 
 
 
@@ -340,7 +337,7 @@ What follows is a prettified example of a JSON-encoded log message. Normally all
           [
              0.000158,
              30,
-             "This is an info message (verbosity=30)"
+             "This is an info message (log level=30)"
           ],
           [
              0.201223,
@@ -371,13 +368,13 @@ What follows is a prettified example of a JSON-encoded log message. Normally all
 
 
 
-
-
 =head1 SEE ALSO
 
 As mentioned above, this module doesn't actually log messages to disk/syslog/anything so you still must use some other module to record your log messages. There are many libraries on CPAN that can do this and there should be at least one that fits your requirements. Some examples are: L<Sys::Syslog>, L<Log::Dispatch>, L<Log::Handler>, L<Log::Log4perl>, L<Log::Fast>, L<AnyEvent::Log>.
 
-Some caveats related to non-monotonous clocks are discussed in L<Time::HiRes>.
+Additionally, this module doesn't provide any official serialization format. There are many choices for this, including L<JSON::XS>, L<Storable>, and L<Data::MessagePack>.
+
+Currently the timestamp generation system is hard-coded to C<Time::HiRes::time>. You should be aware of some caveats related to non-monotonous clocks that are discussed in L<Time::HiRes>.
 
 
 
