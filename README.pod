@@ -8,6 +8,11 @@ Log::Defer - Deferred logs and timers
     use Log::Defer;
     use JSON::XS; ## or whatever
 
+    sub my_logger_function {
+      my $msg = shift;
+      print JSON::XS->new->pretty(1)->encode($msg);
+    }
+
     my $logger = Log::Defer->new({
                                    cb => \&my_logger_function,
                                    verbosity => 30,
@@ -19,11 +24,6 @@ Log::Defer - Deferred logs and timers
     undef $timer; ## stops timer
 
     undef $logger; ## write out log message
-
-    sub my_logger_function {
-      my $msg = shift;
-      print JSON::XS->new->pretty(1)->encode($msg);
-    }
 
 Prints:
 
@@ -76,16 +76,20 @@ However, doing analysis on line-based or, even worse, ad-hoc unstructured multi-
 
 =head1 LOG MESSAGES
 
-Log::Defer objects provide a very basic "log level" system. In order of increasing verbosity, here are the possible logging methods:
+Log::Defer objects provide a very basic "log level" system. In order of increasing verbosity, here are the normal logging methods:
 
     $logger->error("...");  # 10
     $logger->warn("...");   # 20
     $logger->info("...");   # 30
     $logger->debug("...");  # 40
 
+Although you can also specify a custom log level:
+
+    $logger->add_log(25, "...");
+
 If you pass in a C<verbosity> argument, messages with a higher log level will not be included in the final log message. Otherwise, all log messages are included.
 
-Here is an example of issuing a warning:
+Note that you can pass multiple arguments:
 
     $logger->warn("something weird happened", { username => $username });
 
@@ -106,7 +110,7 @@ If you would like to record complex messages in debug mode but don't want to bur
 
     $logger->debug(sub { "Connection: " . dump_connection_info($conn) });
 
-The sub won't be evaluated unless the logger object is instantiated with C<verbosity> of 40 or higher (or you omit C<verbosity>).
+The sub won't be invoked unless the logger object is instantiated with C<verbosity> of 40 or higher (or you omit C<verbosity>).
 
 
 
