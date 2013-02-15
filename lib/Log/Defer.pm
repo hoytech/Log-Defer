@@ -185,19 +185,32 @@ Prints:
 
 =head1 DESCRIPTION
 
-B<This module doesn't actually log anything!> To use this module for normal logging purposes you also need a logging library (some of them are mentioned in L<SEE ALSO>).
+I believe a lot of log processing is done too early. This module helps you to defer log processing in two ways:
 
-What this module does is allow you to defer recording log messages until after some kind of transaction has completed. Typically this transaction is something like an HTTP request or a cron job. Generally log messages are easier to read if they are recorded atomically and are not intermingled with log messages created by other transactions.
+=over 4
 
-This module preserves as much structure as possible which allows you to record machine-parseable log messages if you so choose.
+=item Defer recording of log messages until a "transaction" has completed
+
+Typically this transaction is something like an HTTP request or a cron job. Generally log messages are easier to read if they are recorded atomically and are not intermingled with log messages created by other transactions.
+
+=item Defer rendering of log messages
+
+Sometimes you don't know how logs should be rendered until long after the message has been written. If you aren't sure what information you'll want to display, or you expect to display logs in multiple different formats, it makes sense to store your logs in a highly structured format so they can be processed as late as possible.
+
+=back
+
+
+B<This module doesn't actually write out logs!> To use this module for normal logging purposes you also need a logging library (some of them are mentioned in L<SEE ALSO>).
+
+
 
 
 
 =head1 USAGE
 
-The simplest use case is outlined in the L<SYNOPSIS>. You create a new Log::Defer object and pass in a code ref. This code ref will be called once the Log::Defer object is destroyed or all references to the object go out of scope.
+The simplest use case is outlined in the L<SYNOPSIS>. You create a new Log::Defer object and pass in a code ref callback. This callbac will be called once the Log::Defer object is destroyed or once all references to the object go out of scope.
 
-If a transaction has several possible paths it can take, there is no need to manually ensure that every possible path ends up calling your logging routine at the end. The log writing will be deferred until the logger object is destroyed or goes out of scope.
+With Log::Defer, if a transaction has several possible code paths it can take, there is no need to manually ensure that every possible path ends up calling your logging routine at the end. The log writing will be deferred until the logger object is destroyed or goes out of scope.
 
 In an asynchronous application where multiple asynchronous tasks are kicked off concurrently, each task can keep a reference to the logger object and the log writing will be deferred until all tasks are finished.
 
@@ -208,42 +221,46 @@ Log::Defer makes it easy to gather timing information about the various stages o
 
 =head1 STRUCTURED LOGS
 
-So what is the point of this module? Most logging libraries are convenient to use, usually even more-so than Log::Defer. However, this module allows you to record log messages in a format that can be easily analysed if you so choose.
+Free-form line-based log protocols are probably the most common log formats by far. The formats are usually just happenstance -- whatever happened to be convenient for the programmer.
 
-Line-based log protocols are nice because they are compact and since people are used to them they are "easy" to read.
+Unfortunately, doing analysis on ad-hoc unstructured multi-line formats requires a lot of time-consuming parsing work. As well as being a perl module, Log::Defer is also a specification for a structured logging format.
 
-However, doing analysis on line-based or, even worse, ad-hoc unstructured multi-line formats is more difficult than it needs to be. And given the right tools, reading structured log messages can actually be easier than reading line-based logs.
+Although this module doesn't impose any external encoding for log messages on you, some tools like the visualisation tool only support JSON at this time.
+
+FIXME: QQQ Normally all unnecessary white-space would be removed and it would be stored on a single line so that ad-hoc command-line C<grep>ing still works.
 
 
 
 =head1 LOG MESSAGES
 
-Log::Defer objects provide a very basic "log level" system. In order of increasing verbosity, here are the normal logging methods:
+Log::Defer objects provide a very basic "log level" system. In order of increasing verbosity, here are the normal logging methods and their numeric log level:
 
     $logger->error("...");  # 10
     $logger->warn("...");   # 20
     $logger->info("...");   # 30
     $logger->debug("...");  # 40
 
-You can also specify a custom log level:
+You can also use custom log levels:
 
     $logger->add_log(25, "...");
 
 If you pass in a C<verbosity> argument to the Log::Defer constructor, messages with a higher log level will not be included in the final log message. Otherwise, all log messages are included.
 
+Even if you include noisy debug logs you can filter them out with the visualisation tool at display time. The C<verbosity> argument is only useful for reducing the size of log messages or eliminating unnecessary processing overhead (see the no-overhead debug logs section below).
+
 Note that you can pass in multiple items to a log message and they don't even need to be strings:
 
-    $logger->warn("something weird happened", { username => $username });
+    $logger->warn("something weird happened: $@", { username => $username });
 
 In the deferred logging callback, the log messages are recorded in the C<logs> element of the C<$msg> hash. It is an array ref and here would be the element pushed onto C<logs> by the C<warn> method call above:
 
-    [ 0.201223, 20, "something weird happened", { username => "jimmy" } ]
+    [ 0.201223, 20, "something weird happened: peer timeout", { username => "jimmy" } ]
 
-The first element is a timestamp of when the C<warn> method was called in seconds since the C<start> (see L<TIMERS> below) and the second element is the verbosity level.
+The first element is a timestamp of how long the C<warn> method was called after the C<start> in seconds (see L<TIMERS> below). The second element is the verbosity level of this message.
 
 
 
-=head1 DELAYED MESSAGE GENERATION
+=head1 NO-OVERHEAD DEBUG LOGS
 
 If you would like to compute complex messages in debug mode but don't want to burden your production systems with this overhead, you can use delayed message generation:
 
@@ -259,17 +276,21 @@ Instead of log messages, you can directly add items to a C<data> hash reference 
 
     $log->data->{ip} = $ENV{REMOTE_ADDR};
 
-This is useful for recording info related to a transaction. Anything you put in the C<data> hash reference will be passed along untouched to your defered callback. This is ideal for advanced automated parsing of log messages because the data is easily accessible.
+This is a useful place to recording info that needs to be extracted since you don't need to crawl through log message entries. Anything you put in the C<data> hash reference will be passed along untouched to your defered callback.
 
 
 
 =head1 TIMERS
 
-When the logger object is first created, the current time is recorded and is stored in the C<start> element of the log hash. However, you can record timing data of sub-portions of your transaction with timer objects.
+When the logger object is first created, the current time is recorded as a L<Time::HiRes> absolute timestamp and is stored in the C<start> element of the log hash. All other times are relative offsets from C<start>.
+
+When the logger object is destroyed, the time elapsed since C<start> is stored in C<end>.
+
+In addition to start and duration of the entire transaction, you can also record timing data of sub-portions of your transaction by using timer objects.
 
 Timer objects are created by calling the C<timer> method on the logger object. This method should be passed a description of what you are timing.
 
-The timer starts as soon as the timer object is created and stops once the last reference to the timer is destroyed or goes out of scope, or if the logger object itself is destroyed/goes out of scope.
+The timer starts as soon as the timer object is created and stops once the last reference to the timer is destroyed or goes out of scope. If the logger object itself is destroyed or goes out of scope then all outstanding timers are terminated at that point.
 
 C<start> is a L<Time::HiRes> absolute timestamp. All other times are relative offsets from this C<start> time. Everything is in seconds.
 
@@ -326,9 +347,9 @@ Here is a fairly complicated example of using concurrent timers:
 
 =head1 EXAMPLE LOG MESSAGE
 
-Each structured log message will be passed into the callback provided to C<new>. The message is a perl hash reference that contains various other perl data-structures. What you do at this point is up to you.
+Each structured log message will be passed into the callback provided to C<new> as a perl hash reference that contains various other perl data-structures. What you do at this point is up to you.
 
-What follows is a prettified example of a JSON-encoded log message. Normally all unnecessary white-space would be removed and it would be stored on a single line so that ad-hoc command-line C<grep>ing still works.
+Here is a prettified example of a JSON-encoded message:
 
     {
        "start" : 1340353046.93565,
@@ -372,7 +393,7 @@ What follows is a prettified example of a JSON-encoded log message. Normally all
 
 As mentioned above, this module doesn't actually log messages to disk/syslog/anything so you still must use some other module to record your log messages. There are many libraries on CPAN that can do this and there should be at least one that fits your requirements. Some examples are: L<Sys::Syslog>, L<Log::Dispatch>, L<Log::Handler>, L<Log::Log4perl>, L<Log::Fast>, L<AnyEvent::Log>.
 
-Additionally, this module doesn't provide any official serialization format. There are many choices for this, including L<JSON::XS>, L<Storable>, and L<Data::MessagePack>.
+Additionally, this module doesn't provide any official serialization format. There are many choices for this, including L<JSON::XS>, L<Sereal>, L<Storable>, and L<Data::MessagePack>.
 
 Currently the timestamp generation system is hard-coded to C<Time::HiRes::time>. You should be aware of some caveats related to non-monotonous clocks that are discussed in L<Time::HiRes>.
 
@@ -384,7 +405,7 @@ Doug Hoyte, C<< <doug@hcsw.org> >>
 
 =head1 COPYRIGHT & LICENSE
 
-Copyright 2012 Doug Hoyte.
+Copyright 2012-2013 Doug Hoyte.
 
 This module is licensed under the same terms as perl itself.
 
