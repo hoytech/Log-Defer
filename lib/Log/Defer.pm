@@ -294,18 +294,7 @@ The timer starts as soon as the timer object is created and stops once the last 
 
 C<start> is a L<Time::HiRes> absolute timestamp. All other times are relative offsets from this C<start> time. Everything is in seconds.
 
-With the L<Log::Defer::Viz> module you can take your recorded timer data and render log messages that look like this:
-
-     download file |===============================================|
-      cache lookup |==============|
-      update cache                |=========================================|
-         DB lookup                |======================|
-        sent reply                                                 X
-    ________________________________________________________________________________
-    times in ms    0.2            32.4                             100.7
-                                                         80.7              119.2
-
-Here is a fairly complicated example of using concurrent timers:
+Here is a fairly complicated example showing how to use concurrent timers:
 
     sub handle_request {
       my $request = shift;
@@ -386,6 +375,18 @@ Here is a prettified example of a JSON-encoded message:
 
 
 
+=head1 Visualisation
+
+See the L<Log::Defer::Viz> module for a command line utility that renders Log::Defer logs. Timers are shown something like this:
+
+     download file |===============================================|
+      cache lookup |==============|
+      update cache                |=========================================|
+         DB lookup                |======================|
+        sent reply                                                 X
+    ________________________________________________________________________________
+    times in ms    0.2            32.4                             100.7
+                                                         80.7              119.2
 
 
 
