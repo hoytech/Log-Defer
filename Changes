@@ -1,3 +1,15 @@
+0.200  2013-02-15
+  * Removed Log::Defer::Viz since it's getting its own
+    CPAN distribution so you don't need to install its
+    dependencies on your servers
+  * Added verbosity option
+  * Now you can pass a hashref into the constructor
+    in order to support extra args (like verbosity).
+    The old way is still supported too.
+  * Added no-overhead debug logging (see docs)
+  * Don't include MYMETA in CPAN dist
+  * Doc updates
+
 0.12   2012-07-05
   * Log::Defer::Viz ASCII art drawing of timer data
 
