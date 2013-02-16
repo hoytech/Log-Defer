@@ -7,3 +7,4 @@ MANIFEST.SKIP
 README
 t/empty.t
 t/full.t
+t/opts.t
