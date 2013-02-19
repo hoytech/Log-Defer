@@ -185,17 +185,19 @@ Prints:
 
 =head1 DESCRIPTION
 
-I believe a lot of log processing is done too early. This module helps you to defer log processing in two ways:
+I believe a lot of log processing is done too early.
+
+This module helps you defer log processing in two ways:
 
 =over 4
 
-=item Defer recording of log messages until a "transaction" has completed
+=item Defer recording of log messages until some "transaction" has completed
 
 Typically this transaction is something like an HTTP request or a cron job. Generally log messages are easier to read if they are recorded atomically and are not intermingled with log messages created by other transactions.
 
 =item Defer rendering of log messages
 
-Sometimes you don't know how logs should be rendered until long after the message has been written. If you aren't sure what information you'll want to display, or you expect to display logs in multiple different formats, it makes sense to store your logs in a highly structured format so they can be processed as late as possible.
+Sometimes you don't know how logs should be rendered until long after the message has been written. If you aren't sure what information you'll want to display, or you expect to display logs in multiple different formats, it makes sense to store your logs in a highly structured format so they can be reliably parsed and then processed later.
 
 =back
 
@@ -208,9 +210,16 @@ B<This module doesn't actually write out logs!> To use this module for normal lo
 
 =head1 USAGE
 
-The simplest use case is outlined in the L<SYNOPSIS>. You create a new Log::Defer object and pass in a code ref callback. This callbac will be called once the Log::Defer object is destroyed or once all references to the object go out of scope.
+The simplest use case is outlined in the L<SYNOPSIS>. You create a new Log::Defer object and pass in a code ref callback. This callback will be called once the Log::Defer object is destroyed or once all references to the object go out of scope:
 
-With Log::Defer, if a transaction has several possible code paths it can take, there is no need to manually ensure that every possible path ends up calling your logging routine at the end. The log writing will be deferred until the logger object is destroyed or goes out of scope.
+    sub handle_request {
+      my $logger = Log::Defer->new(\&logging_function);
+      ...
+      $logger->info("blah blah");
+      ...
+    } ## <- $logger goes out of scope here so log is written now
+
+There is no need to manually ensure that every possible code path ends up calling your logging routine at the end because perl's reference counting system does that for you (unless you call C<POSIX::_exit>, don't do that).
 
 In an asynchronous application where multiple asynchronous tasks are kicked off concurrently, each task can keep a reference to the logger object and the log writing will be deferred until all tasks are finished.
 
@@ -219,7 +228,7 @@ Log::Defer makes it easy to gather timing information about the various stages o
 
 
 
-=head1 STRUCTURED LOGS
+= head1 STRUCTURED LOGS
 
 Free-form line-based log protocols are probably the most common log formats by far. The formats are usually just happenstance -- whatever happened to be convenient for the programmer.
 
@@ -227,7 +236,7 @@ Unfortunately, doing analysis on ad-hoc unstructured multi-line formats requires
 
 Although this module doesn't impose any external encoding for log messages on you, some tools like the visualisation tool only support JSON at this time.
 
-FIXME: QQQ Normally all unnecessary white-space would be removed and it would be stored on a single line so that ad-hoc command-line C<grep>ing still works.
+The currently recommended format to store logs in is newline-separated, minified JSON. The newline is useful because it allows simple whole-request greping of the logs. With structured logs, much more accurate and flexible greping is possible, as is shown in L<log-defer-viz>.
 
 
 
@@ -377,7 +386,7 @@ Here is a prettified example of a JSON-encoded message:
 
 =head1 Visualisation
 
-See the L<Log::Defer::Viz> module for a command line utility that renders Log::Defer logs. Timers are shown something like this:
+See the L<log-defer-viz> command-line script that renders Log::Defer logs. Timers are shown something like this:
 
      download file |===============================================|
       cache lookup |==============|
@@ -391,6 +400,10 @@ See the L<Log::Defer::Viz> module for a command line utility that renders Log::D
 
 
 =head1 SEE ALSO
+
+L<Log::Defer github repo|https://github.com/hoytech/Log-Defer>
+
+One way to visualize logs created by this module is with the command-line script L<log-defer-viz>
 
 As mentioned above, this module doesn't actually log messages to disk/syslog/anything so you still must use some other module to record your log messages. There are many libraries on CPAN that can do this and there should be at least one that fits your requirements. Some examples are: L<Sys::Syslog>, L<Log::Dispatch>, L<Log::Handler>, L<Log::Log4perl>, L<Log::Fast>, L<AnyEvent::Log>.
 
