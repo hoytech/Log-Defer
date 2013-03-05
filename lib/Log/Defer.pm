@@ -228,7 +228,7 @@ Log::Defer makes it easy to gather timing information about the various stages o
 
 
 
-= head1 STRUCTURED LOGS
+=head1 STRUCTURED LOGS
 
 Free-form line-based log protocols are probably the most common log formats by far. The formats are usually just happenstance -- whatever happened to be convenient for the programmer.
 
