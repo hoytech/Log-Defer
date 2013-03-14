@@ -136,14 +136,14 @@ sub merge {
 
   ## Merge timers
 
-  my %timers = %{ $msg->{timers} };
+  my %timers = %{ $msg->{timers} || {} };
 
   foreach my $k (keys %timers) {
     $timers{$k}->[0] += $time_offset;
     $timers{$k}->[1] += $time_offset;
   }
 
-  %timers = (%{ $self->{msg}->{timers} }, %timers);
+  %timers = (%{ $self->{msg}->{timers} || {} }, %timers);
 
   $self->{msg}->{timers} = \%timers;
 
@@ -151,7 +151,12 @@ sub merge {
 
   ## FIXME: This needs to do something like Hash::Merge but I don't want to add a dependency...
 
-  $self->{msg}->{data} = { %{ $self->{msg}->{data} }, %{ $msg->{data} } };
+  $self->{msg}->{data} = { %{ $self->{msg}->{data} || {} }, %{ $msg->{data} || {} } };
+
+
+  delete $self->{msg}->{logs} unless @{ $self->{msg}->{logs} };
+  delete $self->{msg}->{timers} unless keys %{ $self->{msg}->{timers} };
+  delete $self->{msg}->{data} unless keys %{ $self->{msg}->{data} };
 }
 
 
