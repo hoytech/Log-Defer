@@ -2,7 +2,7 @@ package Log::Defer;
 
 use strict;
 
-our $VERSION = '0.200';
+our $VERSION = '0.201';
 
 use Time::HiRes;
 use Carp qw/croak/;

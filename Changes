@@ -1,3 +1,8 @@
+0.201  2013-03-13
+  * Add new merge method
+  * Add license info and github repo to meta
+  * Doc updates
+
 0.200  2013-02-15
   * Removed Log::Defer::Viz since it's getting its own
     CPAN distribution so you don't need to install its
