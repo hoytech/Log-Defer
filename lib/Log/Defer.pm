@@ -120,6 +120,42 @@ sub data {
 
 
 
+sub merge {
+  my ($self, $msg) = @_;
+
+  my $time_offset = $msg->{start} - $self->{msg}->{start};
+
+  ## Merge logs
+
+  my @logs = (
+               @{ $self->{msg}->{logs} || [] },
+               (map { [ $_->[0] + $time_offset, @$_[1..(@$_-1)] ] } @{ $msg->{logs} || [] })
+             );
+
+  $self->{msg}->{logs} = [ sort { $a->[0] <=> $b->[0] } @logs ];
+
+  ## Merge timers
+
+  my %timers = %{ $msg->{timers} };
+
+  foreach my $k (keys %timers) {
+    $timers{$k}->[0] += $time_offset;
+    $timers{$k}->[1] += $time_offset;
+  }
+
+  %timers = (%{ $self->{msg}->{timers} }, %timers);
+
+  $self->{msg}->{timers} = \%timers;
+
+  ## Merge data
+
+  ## FIXME: This needs to do something like Hash::Merge but I don't want to add a dependency...
+
+  $self->{msg}->{data} = { %{ $self->{msg}->{data} }, %{ $msg->{data} } };
+}
+
+
+
 
 #### INTERNAL ####
 
