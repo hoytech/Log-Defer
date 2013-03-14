@@ -242,7 +242,7 @@ Here is a prettified example of a JSON-encoded message:
 
 
 
-=head1 Visualisation
+=head1 VISUALISATION
 
 See the L<log-defer-viz> command-line script that renders Log::Defer logs. Timers are shown something like this:
 
@@ -254,6 +254,30 @@ See the L<log-defer-viz> command-line script that renders Log::Defer logs. Timer
     ________________________________________________________________________________
     times in ms    0.2            32.4                             100.7
                                                          80.7              119.2
+
+
+
+=head1 MERGING
+
+Sometimes it's useful to create a "child logger" Log::Defer object which is later merged into your main logger. This can be accomplished with the C<merge> method:
+
+    my $logger = Log::Defer->new(sub {
+                                   my $merged_msg = shift;
+                                   ## ...
+                                 });
+
+    ## ...
+
+    {
+      my $child_logger = Log::Defer->new(sub {
+                                           my $msg = shift;
+                                           $logger->merge($msg);
+                                         });
+    }
+
+    ## ...
+
+This technique is used in L<AnyEvent::Task> so that worker processes can log messages using Log::Defer and these are then merged into a client process's existing Log::Defer object.
 
 
 
