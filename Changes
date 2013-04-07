@@ -1,3 +1,9 @@
+  * Backwards-incompatible change: In the log message,
+    timers are now stored in an array instead of a hash.
+    This is because sometimes it is convenient to not
+    have to worry about giving two different timers the
+    same name (usually when the names are auto-generated).
+
 0.201  2013-03-13
   * Add new merge method
   * Add license info and github repo to meta

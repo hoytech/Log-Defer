@@ -1,6 +1,6 @@
 use strict;
 
-use Test::More tests => 5;
+use Test::More tests => 6;
 
 use Log::Defer;
 
@@ -12,8 +12,9 @@ my $log = Log::Defer->new({ cb => sub {
 
   is_deeply([ map { $_->[2] } @{ $msg->{logs} } ], [qw/D A B C E F/]);
 
-  ok($msg->{timers}->{blah}->[0] > 1.05, 'timer offset ok');
-  ok($msg->{timers}->{junk}, 'junk timer preserved');
+  is($msg->{timers}->[0]->[0], 'junk');
+  is($msg->{timers}->[1]->[0], 'blah');
+  ok($msg->{timers}->[1]->[1] > 1.05, 'timer offset ok');
 
   is($msg->{data}->{hello}, 2, 'hello overwritten');
   is($msg->{data}->{world}, 1, 'world preserved');
@@ -40,9 +41,9 @@ $log->merge({
             [ -10 , 30, 'D' ],
             [ 20, 30, 'C' ],
           ],
-  timers => {
-    blah => [1, 2],
-  },
+  timers => [
+    [ 'blah', 1, 2, ],
+  ],
   data => {
     hello => 2,
   },

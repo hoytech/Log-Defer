@@ -42,9 +42,9 @@ sub new {
     $msg->{end} = $duration;
 
     if (exists $msg->{timers}) {
-      foreach my $name (keys %{$msg->{timers}}) {
-        push @{$msg->{timers}->{$name}}, $duration
-          if @{$msg->{timers}->{$name}} == 1;
+      foreach my $timer_entry (@{$msg->{timers}}) {
+        push @$timer_entry, $duration
+          if @$timer_entry == 2;
       }
     }
 
@@ -95,18 +95,24 @@ sub add_log {
 sub timer {
   my ($self, $name) = @_;
 
-  croak "timer $name already registered" if defined $self->{msg}->{timers}->{$name};
+  ##croak "timer $name already registered" if defined $self->{msg}->{timers}->{$name};
 
   my $timer_start = format_time(Time::HiRes::time() - $self->{msg}->{start});
 
-  $self->{msg}->{timers}->{$name} = [ $timer_start, ];
+  ##$self->{msg}->{timers}->{$name} = [ $timer_start, ];
 
   my $msg = $self->{msg};
+
+  my $timer_entry = [ $name, $timer_start, ];
+
+  $msg->{timers} ||= [];
+
+  push @{$msg->{timers}}, $timer_entry;
 
   return guard {
     my $timer_end = format_time(Time::HiRes::time() - $msg->{start});
 
-    push @{$msg->{timers}->{$name}}, $timer_end;
+    push @$timer_entry, $timer_end;
   }
 }
 
@@ -136,16 +142,14 @@ sub merge {
 
   ## Merge timers
 
-  my %timers = %{ $msg->{timers} || {} };
+  my $timers = [ @{ $msg->{timers} || [] } ];
 
-  foreach my $k (keys %timers) {
-    $timers{$k}->[0] += $time_offset;
-    $timers{$k}->[1] += $time_offset;
+  foreach my $timer_entry (@$timers) {
+    $timer_entry->[1] += $time_offset;
+    $timer_entry->[2] += $time_offset;
   }
 
-  %timers = (%{ $self->{msg}->{timers} || {} }, %timers);
-
-  $self->{msg}->{timers} = \%timers;
+  $self->{msg}->{timers} = [ @{ $self->{msg}->{timers} || [] }, @$timers, ];
 
   ## Merge data
 
@@ -155,7 +159,7 @@ sub merge {
 
 
   delete $self->{msg}->{logs} unless @{ $self->{msg}->{logs} };
-  delete $self->{msg}->{timers} unless keys %{ $self->{msg}->{timers} };
+  delete $self->{msg}->{timers} unless @{ $self->{msg}->{timers} };
   delete $self->{msg}->{data} unless keys %{ $self->{msg}->{data} };
 }
 
@@ -411,16 +415,18 @@ Here is a prettified example of a JSON-encoded message:
        "data" : {
           "junkdata" : "some data"
        },
-       "timers" : {
-          "junktimer" : [
+       "timers" : [
+          [
+             "junktimer",
              0.000224,
              0.100655
           ],
-          "junktimer2" : [
+          [
+             "junktimer2",
              0.000281,
              0.202386
           ]
-       }
+       ]
     }
 
 

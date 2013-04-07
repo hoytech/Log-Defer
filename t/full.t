@@ -1,6 +1,6 @@
 use strict;
 
-use Test::More tests => 26;
+use Test::More tests => 25;
 
 use Log::Defer;
 #use Data::Dumper;
@@ -36,19 +36,18 @@ my $log = Log::Defer->new(sub {
 
   ## timers
 
-  ok(exists $msg->{timers}->{junktimer});
-  ok(exists $msg->{timers}->{junktimer2});
-  ok(exists $msg->{timers}->{junktimer3});
+  ok(exists $msg->{timers});
+  is(@{$msg->{timers}}, 3, 'three timers');
 
-  is(@{$msg->{timers}->{junktimer}}, 2);
-  is(@{$msg->{timers}->{junktimer2}}, 2);
-  is(@{$msg->{timers}->{junktimer3}}, 2);
+  is(@{$msg->{timers}->[0]}, 3);
+  is(@{$msg->{timers}->[1]}, 3);
+  is(@{$msg->{timers}->[2]}, 3);
 
-  ok($msg->{timers}->{junktimer}->[0] <= $msg->{timers}->{junktimer2}->[0]);
-  ok($msg->{timers}->{junktimer2}->[0] <= $msg->{timers}->{junktimer2}->[0]);
+  ok($msg->{timers}->[0]->[1] <= $msg->{timers}->[1]->[1]);
+  ok($msg->{timers}->[1]->[1] <= $msg->{timers}->[1]->[1]);
 
-  ok($msg->{timers}->{junktimer}->[1] <= $msg->{timers}->{junktimer3}->[0]);
-  ok($msg->{timers}->{junktimer3}->[1] <= $msg->{timers}->{junktimer2}->[1]);
+  ok($msg->{timers}->[0]->[2] <= $msg->{timers}->[2]->[1]);
+  ok($msg->{timers}->[2]->[2] <= $msg->{timers}->[1]->[2]);
 
   ## data
 
