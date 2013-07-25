@@ -94,7 +94,7 @@ Unfortunately, doing analysis on ad-hoc unstructured logs requires lots of codin
 
 As well as being a perl module, Log::Defer is also a specification for a structured logging format. Although it doesn't impose any external encoding for log messages on you, some tools like the visualisation tool L<log-defer-viz> only support JSON at this time.
 
-The currently recommended format to store logs in is newline-separated, minified JSON. The newline+minification is useful because it allows simple whole-request greping of the logs. With structured logs, much more accurate and flexible greping is also possible, as described in L<log-defer-viz#GREPPING>.
+The currently recommended format to store logs in is newline-separated, minified JSON. The newline+minification is useful because it allows simple whole-request greping of the logs. With structured logs, much more accurate and flexible greping is also possible, as described in L<log-defer-viz>.
 
 
 
