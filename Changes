@@ -1,3 +1,9 @@
+  * In synopsis docs, add error checking to message encoding.
+    If you forget to do this and any of your messages can't be
+    encoded you will have a very difficult bug to solve
+    (thanks Matt Phillips)
+  * Doc updates
+
 0.300  2013-04-08
   * Backwards-incompatible change: In the log message,
     timers are now stored in an array instead of a hash.
