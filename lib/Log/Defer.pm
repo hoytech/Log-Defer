@@ -193,18 +193,20 @@ Log::Defer - Deferred logs and timers
 =head1 SYNOPSIS
 
     use Log::Defer;
-    use Try::Tiny;
     use JSON::XS; ## or whatever
+    use Try::Tiny;
 
     sub my_logger_function {
       my $msg = shift;
       
-      print try {
-        JSON::XS->new->pretty(1)->encode($msg);
+      my $encoded_msg = try {
+        JSON::XS->new->pretty(1)->encode($msg)
       }
       catch {
-        "Failed to encode msg : $_"; # do something with $msg
+        "Failed to JSON encode msg : $_"
       };
+
+      print $encoded_msg; ## usually you'd append this to a file
     }
 
     my $logger = Log::Defer->new({
