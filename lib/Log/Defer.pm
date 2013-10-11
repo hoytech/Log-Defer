@@ -286,7 +286,7 @@ Log::Defer makes it easy to gather timing information about the various stages o
 
 Free-form line-based log protocols are probably the most common log formats by far. The "format" is usually just coincidental -- whatever happened to be convenient for the programmer to record.
 
-Unfortunately, doing analysis on ad-hoc unstructured logs requires lots of coding work building parsers. Even more annoying is that these parsers are often regexp-based and brittle.
+Unfortunately, doing analysis on ad-hoc unstructured logs requires lots of menial coding work writing parsers. Even more annoying is that these parsers are often regexp-based and brittle.
 
 As well as being a perl module, Log::Defer is also a specification for a structured logging format. Although it doesn't impose any external encoding for log messages on you, some tools like the visualisation tool L<log-defer-viz> only support JSON at this time.
 
@@ -309,17 +309,17 @@ You can also use custom log levels:
 
 If you pass in a C<verbosity> argument to the Log::Defer constructor, messages with a higher log level will not be included in the final log message. Otherwise, all log messages are included.
 
-Even if you include noisy debug logs you can filter them out with the visualisation tool at display time. The C<verbosity> argument is only useful for reducing the size of log messages or eliminating unnecessary processing overhead (see the no-overhead debug logs section below).
+Even if you record noisy debug logs you can filter them out with a visualisation tool at display time. The C<verbosity> argument is only useful for reducing the size of log messages or eliminating unnecessary processing overhead (see the no-overhead debug logs section below).
 
-Note that you can pass in multiple items to a log message and they don't even need to be strings:
+Note that you can pass in multiple items to a log message and they don't even need to be strings (but make sure you are catching any exceptions thrown by your encoder as done in the synopsis):
 
-    $logger->warn("something weird happened: $@", { username => $username });
+    $logger->error("peer timeout", { waited => $timeout });
 
-In the deferred logging callback, the log messages are recorded in the C<logs> element of the C<$msg> hash. It is an array ref and here would be the element pushed onto C<logs> by the C<warn> method call above:
+In the deferred logging callback, the log messages are recorded in the C<logs> element of the C<$msg> hash. It is an array ref and here is the element that would be pushed onto C<logs> by the C<error> method call above:
 
-    [ 0.201223, 20, "something weird happened: peer timeout", { username => "jimmy" } ]
+    [ 30.201223, 10, "peer timeout", { waited => 30 } ]
 
-The first element is a timestamp of how long the C<warn> method was called after the C<start> in seconds (see L<TIMERS> below). The second element is the verbosity level of this message.
+The first element is a timestamp of how long the C<error> method was called after the C<start> in seconds (see L<TIMERS> below). The second element is the verbosity level of this message. The remaining elements are passed in untouched from the C<error> method.
 
 
 
@@ -339,7 +339,7 @@ Instead of log messages, you can directly add items to a C<data> hash reference 
 
     $log->data->{ip} = $ENV{REMOTE_ADDR};
 
-This is a useful place to record info that needs to be extracted programatically. Anything you put in the C<data> hash reference will be passed along untouched to your defered callback.
+This is a useful place to record info that needs to be extracted programatically. Anything you put in the C<data> hash reference will be passed along untouched to your defered callback (but again, make sure you are catching encoder exceptions as shown in the synopsis).
 
 
 
@@ -450,9 +450,9 @@ L<Log::Defer github repo|https://github.com/hoytech/Log-Defer>
 
 One way to visualize logs created by this module is with the command-line script L<log-defer-viz>
 
-As mentioned above, this module doesn't actually log messages to disk/syslog/anything so you still must use some other module to record your log messages. There are many libraries on CPAN that can do this and there should be at least one that fits your requirements. Some examples are: L<Sys::Syslog>, L<Log::Dispatch>, L<Log::Handler>, L<Log::Log4perl>, L<Log::Fast>, L<AnyEvent::Log>.
+As mentioned above, this module doesn't itself log messages to disk so you still must use some other module to record your log messages. There are many libraries on CPAN that can do this and there should be at least one that fits your requirements. Some examples are: L<Sys::Syslog>, L<Log::Dispatch>, L<Log::Handler>, L<Log::Log4perl>, L<Log::Fast>, L<AnyEvent::Log>.
 
-Additionally, this module doesn't provide any official serialization format. There are many choices for this, including L<JSON::XS>, L<Sereal>, L<Storable>, and L<Data::MessagePack>.
+Additionally, this module doesn't provide any official serialization format. There are many choices for this, including L<JSON::XS> (JSON is the only format currently supported by L<log-defer-viz>), L<Sereal>, L<Storable>, and L<Data::MessagePack>.
 
 Currently the timestamp generation system is hard-coded to C<Time::HiRes::time>. You should be aware of some caveats related to non-monotonous clocks that are discussed in L<Time::HiRes>.
 
