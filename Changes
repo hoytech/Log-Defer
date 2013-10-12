@@ -1,3 +1,4 @@
+0.310  2013-10-12
   * In synopsis docs, add error checking to message encoding.
     If you forget to do this and any of your messages can't be
     encoded you will have a very difficult bug to solve
