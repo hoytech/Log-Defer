@@ -184,11 +184,11 @@ sub format_time {
 
 __END__
 
+=encoding utf-8
 
 =head1 NAME
 
 Log::Defer - Deferred logs and timers
-
 
 =head1 SYNOPSIS
 
