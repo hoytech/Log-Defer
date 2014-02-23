@@ -232,6 +232,13 @@ Prints:
              30,
              "hello world"
           ]
+       ],
+       "timers" : [
+          [
+             "some timer",
+             0.000210,
+             0.000233
+          ]
        ]
     }
 

@@ -1,7 +1,8 @@
+=encoding utf-8
+
 =head1 NAME
 
 Log::Defer - Deferred logs and timers
-
 
 =head1 SYNOPSIS
 
@@ -44,6 +45,13 @@ Prints:
              0.000147,
              30,
              "hello world"
+          ]
+       ],
+       "timers" : [
+          [
+             "some timer",
+             0.000210,
+             0.000233
           ]
        ]
     }
