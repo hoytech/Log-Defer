@@ -272,6 +272,8 @@ L<Log::Defer github repo|https://github.com/hoytech/Log-Defer>
 
 One way to visualize logs created by this module is with the command-line script L<log-defer-viz>
 
+Michael Pucyk has created a Python implementation for the Log::Defer format: L<LogDefer Python module|https://github.com/mikep/LogDefer>
+
 As mentioned above, this module doesn't itself log messages to disk so you still must use some other module to record your log messages. There are many libraries on CPAN that can do this and there should be at least one that fits your requirements. Some examples are: L<Sys::Syslog>, L<Log::Dispatch>, L<Log::Handler>, L<Log::Log4perl>, L<Log::Fast>, L<AnyEvent::Log>.
 
 Additionally, this module doesn't provide any official serialization format. There are many choices for this, including L<JSON::XS> (JSON is the only format currently supported by L<log-defer-viz>), L<Sereal>, L<Storable>, and L<Data::MessagePack>.
