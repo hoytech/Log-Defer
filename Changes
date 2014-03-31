@@ -1,3 +1,7 @@
+0.311  2014-03-31
+  * Doc updates
+  * Link to Michael Pucyk's Python implementation
+
 0.310  2013-10-12
   * In synopsis docs, add error checking to message encoding.
     If you forget to do this and any of your messages can't be
