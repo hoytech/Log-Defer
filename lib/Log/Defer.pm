@@ -451,14 +451,20 @@ Sometimes it's useful to create a "child logger" Log::Defer object which is late
 This technique is used in L<AnyEvent::Task> so that worker processes can log messages using Log::Defer and these are then merged into a client process's existing logger object.
 
 
+=head1 ALTERNATE IMPLEMENTATIONS
+
+Michael Pucyk's Python implementation: L<LogDefer Python module|https://github.com/mikep/LogDefer>
+
+Doug Hoyte's C++ implementation: L<LogDefer-CXX|https://github.com/hoytech/LogDefer-CXX>
+
+Richard Farr's D implementation: L<LogDefer-D|https://github.com/rfarr/LogDefer-D>
+
 
 =head1 SEE ALSO
 
 L<Log::Defer github repo|https://github.com/hoytech/Log-Defer>
 
 One way to visualize logs created by this module is with the command-line script L<log-defer-viz>
-
-Michael Pucyk has created a Python implementation for the Log::Defer format: L<LogDefer Python module|https://github.com/mikep/LogDefer>
 
 As mentioned above, this module doesn't itself log messages to disk so you still must use some other module to record your log messages. There are many libraries on CPAN that can do this and there should be at least one that fits your requirements. Some examples are: L<Sys::Syslog>, L<Log::Dispatch>, L<Log::Handler>, L<Log::Log4perl>, L<Log::Fast>, L<AnyEvent::Log>.
 
@@ -474,7 +480,7 @@ Doug Hoyte, C<< <doug@hcsw.org> >>
 
 =head1 COPYRIGHT & LICENSE
 
-Copyright 2012-2014 Doug Hoyte.
+Copyright 2012-2015 Doug Hoyte.
 
 This module is licensed under the same terms as perl itself.
 
