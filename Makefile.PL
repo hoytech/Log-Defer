@@ -1,9 +1,5 @@
 use ExtUtils::MakeMaker;
 
-my $preop =
-    'perldoc -uT $(VERSION_FROM) | tee $(DISTVNAME)/README.pod > README.pod;' .
-    'pod2text README.pod | tee $(DISTVNAME)/README > README';
-
 my %args = (
   NAME => 'Log::Defer',
   VERSION_FROM => 'lib/Log/Defer.pm',
@@ -14,7 +10,7 @@ my %args = (
     'Guard' => 0,
   },
   dist => {
-    PREOP => $preop,
+    PREOP => 'pod2text $(VERSION_FROM) > $(DISTVNAME)/README',
   },
 );
 
