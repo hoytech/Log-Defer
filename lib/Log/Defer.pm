@@ -470,7 +470,7 @@ As mentioned above, this module doesn't itself log messages to disk so you still
 
 Additionally, this module doesn't provide any official serialization format. There are many choices for this, including L<JSON::XS> (JSON is the only format currently supported by L<log-defer-viz>), L<Sereal>, L<Storable>, and L<Data::MessagePack>.
 
-Currently the timestamp generation system is hard-coded to C<Time::HiRes::time>. You should be aware of some caveats related to non-monotonous clocks that are discussed in L<Time::HiRes>.
+Currently the timestamp generation system is hard-coded to C<Time::HiRes::time>. You should be aware of some caveats related to non-monotonic clocks that are discussed in L<Time::HiRes>.
 
 
 
