@@ -459,6 +459,8 @@ Doug Hoyte's C++ implementation: L<LogDefer-CXX|https://github.com/hoytech/LogDe
 
 Richard Farr's D implementation: L<LogDefer-D|https://github.com/rfarr/LogDefer-D>
 
+Mark Jubenville's Javascript implementation: L<log-defer|https://github.com/ioncache/log-defer>
+
 
 =head1 SEE ALSO
 
