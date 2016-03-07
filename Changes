@@ -1,3 +1,10 @@
+0.312  2016-03-07
+  * Fix typo in docs
+  * Links to more implementations:
+    * C++
+    * D (Richard Farr)
+    * Javascript (Mark Jubenville)
+
 0.311  2014-03-31
   * Doc updates
   * Link to Michael Pucyk's Python implementation

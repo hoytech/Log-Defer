@@ -2,7 +2,7 @@ package Log::Defer;
 
 use strict;
 
-our $VERSION = '0.311';
+our $VERSION = '0.312';
 
 use Time::HiRes;
 use Carp qw/croak/;
@@ -482,7 +482,7 @@ Doug Hoyte, C<< <doug@hcsw.org> >>
 
 =head1 COPYRIGHT & LICENSE
 
-Copyright 2012-2015 Doug Hoyte.
+Copyright 2012-2016 Doug Hoyte.
 
 This module is licensed under the same terms as perl itself.
 
